@@ -52,6 +52,7 @@ function createAsset(filename) {
   //
   // The AST contains a lot of information about our code. We can query it to
   // understand what our code is trying to do.
+  // every file will as a module
   const ast = babylon.parse(content, {
     sourceType: 'module',
   });
@@ -71,7 +72,9 @@ function createAsset(filename) {
       dependencies.push(node.source.value);
     },
   });
-
+  console.log('收集依赖。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。')
+  console.log(dependencies)
+  console.log('收集依赖。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。')
   // We also assign a unique identifier to this module by incrementing a simple
   // counter.
   const id = ID++;
@@ -88,6 +91,7 @@ function createAsset(filename) {
   });
 
   // Return all information about this module.
+
   return {
     id,
     filename,
@@ -114,6 +118,7 @@ function createGraph(entry) {
   // We use a `for ... of` loop to iterate over the queue. Initially the queue
   // only has one asset but as we iterate it we will push additional new assets
   // into the queue. This loop will terminate when the queue is empty.
+
   for (const asset of queue) {
     // Every one of our assets has a list of relative paths to the modules it
     // depends on. We are going to iterate over them, parse them with our
@@ -149,6 +154,7 @@ function createGraph(entry) {
 
   // At this point the queue is just an array with every module in the target
   // application: This is how we represent our graph.
+  console.log('queue*******************************',queue)
   return queue;
 }
 
@@ -219,19 +225,32 @@ function bundle(graph) {
   // Lastly, with CommonJs, when a module is required, it can expose values by
   // mutating its `exports` object. The `exports` object, after it has been
   // changed by the module's code, is returned from the `require()` function.
+  console.log('11111111111111111111111111111111111')
+  console.log({modules})
+  console.log('11111111111111111111111111111111111')
   const result = `
     (function(modules) {
+      var installedModules = {};
       function require(id) {
+       if(installedModules[id])
+             return installedModules[id].exports;
+             
         const [fn, mapping] = modules[id];
-
         function localRequire(name) {
-          return require(mapping[name]);
+          if(installedModules[name]) {
+            console.log('重复模块直接使用缓存', name)
+            return installedModules[name].result;
+          }
+          const result = require(mapping[name]);
+          installedModules[name] = {
+            result: result,
+          }
+          return result;
         }
 
         const module = { exports : {} };
 
         fn(localRequire, module, module.exports);
-
         return module.exports;
       }
 
@@ -242,8 +261,29 @@ function bundle(graph) {
   // We simply return the result, hurray! :)
   return result;
 }
+// 收集依赖从entry里面分析依赖
 
-const graph = createGraph('./example/entry.js');
+const graph = createGraph('../example/entry.js');
+// 返回的graph是这个样子的[{id: 0(入口文件), filename: './entry.js', code: '用ast之后生成的', dependency: [收集的依赖]}, ...]
+console.log(graph)
+console.log('hehehehehe')
 const result = bundle(graph);
+// result就是生成webpackJsonp函数的关键步骤
+// 因为webpackJsonP = (function module(){
+//  var installedModules = {};
+//       function require(id) {
+//            const [fn, mapping] = modules[id];
+//        被重写的require可以先获得0的依赖之后require message执行的是localRequire然后里面的变成了require（1）进入到require（1）调用1里面的依赖和函数然后require message里面的依赖一直到这个 require的依赖都没了进行entry的下一步，所以在里面做了缓存，发现最巧妙的是都变成了字符串然后收集依赖利用 require不停的深度搜索依赖，优化点在于重复依赖走缓存，然后如果存在循环依赖就失败了，这个有待改进
+//         function localRequire(name) {
+//
+//           return require(mapping[name]);
+//
+//         }
+//
+//         const module = { exports : {} };
+//
+//         fn(localRequire, module, module.exports);
+//
+//         return module.exports;})([function (require, module, exports){对应文件代码}, ...]有依赖的文件都会在这里出现重复的文件在别的文件中依赖也会产生一个id但是传递进来的require相当于是知道原来的代码里面利用 require所以就定义了一个 require
 
-console.log(result);
+eval(result)
