@@ -41,3 +41,6 @@ $ node src/minipack.js
 - [한글/Korean](https://github.com/hg-pyun/minipack-kr)
 - [中文/Chinese](https://github.com/chinanf-boy/minipack-explain)
 - [Русский/Russian](https://github.com/makewebme/build-your-own-webpack)
+
+### 自己写一下阅读minipack的心得体会主要是使用ast解析么一个文件的import获取每一个文件的依赖，收集依赖给我的感觉每一个文件的依赖就会使用深度遍历到我们需要的每个文件的mapping里面
+### 生成一个完整的图

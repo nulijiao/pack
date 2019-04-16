@@ -39,7 +39,7 @@ let ID = 0;
 function createAsset(filename) {
   // Read the content of the file as a string.
   const content = fs.readFileSync(filename, 'utf-8');
-
+  console.log(content)
   // Now we try to figure out which files this file depends on. We can do that
   // by looking at its content for import strings. However, this is a pretty
   // clunky approach, so instead, we will use a JavaScript parser.
